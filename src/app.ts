@@ -1,9 +1,12 @@
 import express from "express";
+import expressSession from "express-session";
 import mongoose from "mongoose";
 import compression from "compression";
 import Controller from "./utils/interfaces/controller.interface";
 import cors from "cors";
 import morgan from "morgan";
+import path from "path";
+import mustacheExpress from "mustache-express";
 import errorMiddleware from "./middleware/error.middleware";
 
 class App {
@@ -21,6 +24,19 @@ class App {
   }
 
   private initialiseMiddleware(): void {
+    this.express.use(
+      expressSession({
+        saveUninitialized: true,
+        resave: true,
+        secret: process.env.COOKIE_SECRET as string,
+        cookie: { maxAge: (process.env.COOKIE_MAX_AGE as unknown) as number }
+      })
+    );
+
+    this.express.engine("mst", mustacheExpress());
+    this.express.set("views", path.join(__dirname, "../views"));
+    this.express.set("view engine", "mst");
+    this.express.use(express.static(path.join(__dirname, "../public")));
     this.express.use(cors());
     this.express.use(morgan("dev"));
     this.express.use(express.json());
