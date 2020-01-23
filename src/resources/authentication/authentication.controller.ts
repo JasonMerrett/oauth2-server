@@ -3,7 +3,6 @@ import Controller from '../../utils/interfaces/controller.interface';
 import passport from 'passport';
 import validationMiddleware from '../../middleware/validation.middleware';
 import validate from './authentication.validation';
-import roleModel from '../user/role/role.model';
 
 class AuthenticationController implements Controller {
     public path = '/auth';
@@ -24,6 +23,14 @@ class AuthenticationController implements Controller {
             }),
             this.register
         );
+        this.router.get(`${this.path}/login`, this.getLogin);
+        this.router.post(
+            `${this.path}/login`,
+            passport.authenticate('login', {
+                successReturnToOrRedirect: '/',
+                failureRedirect: '/auth/login'
+            })
+        );
     }
 
     private register = async (
@@ -37,9 +44,14 @@ class AuthenticationController implements Controller {
         req: Request,
         res: Response
     ): Promise<Response | void> => {
-        roleModel.create({ name: 'user' });
-        roleModel.create({ name: 'admin' });
         res.render('register');
+    };
+
+    private getLogin = async (
+        req: Request,
+        res: Response
+    ): Promise<Response | void> => {
+        res.render('login');
     };
 }
 
