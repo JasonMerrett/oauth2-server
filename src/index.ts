@@ -1,15 +1,14 @@
 import 'dotenv/config';
 import App from './app';
 import validateEnv from './utils/validateEnv';
-import TestController from './resources/test.controller';
+import AuthenticationController from './resources/authentication/authentication.controller';
 
 validateEnv();
 
 const app = new App(
     [
         // instantiate controller classes
-        // new AuthenticationController()
-        new TestController()
+        new AuthenticationController()
     ],
     Number(process.env.PORT)
 );

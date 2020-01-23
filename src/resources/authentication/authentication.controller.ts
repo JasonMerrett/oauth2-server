@@ -3,6 +3,7 @@ import Controller from '../../utils/interfaces/controller.interface';
 import passport from 'passport';
 import validationMiddleware from '../../middleware/validation.middleware';
 import validate from './authentication.validation';
+import roleModel from '../user/role/role.model';
 
 class AuthenticationController implements Controller {
     public path = '/auth';
@@ -29,13 +30,15 @@ class AuthenticationController implements Controller {
         req: Request,
         res: Response
     ): Promise<Response | void> => {
-        res.render('test');
+        res.render('register');
     };
 
     private getRegister = async (
         req: Request,
         res: Response
     ): Promise<Response | void> => {
+        roleModel.create({ name: 'user' });
+        roleModel.create({ name: 'admin' });
         res.render('register');
     };
 }

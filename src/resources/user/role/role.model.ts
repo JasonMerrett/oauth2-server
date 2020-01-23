@@ -3,7 +3,7 @@ import Role from './role.interface';
 
 const Schema = mongoose.Schema;
 
-const UserSchema: mongoose.Schema = new Schema({
+const RoleSchema: mongoose.Schema = new Schema({
     name: {
         type: String,
         required: true,
@@ -12,4 +12,4 @@ const UserSchema: mongoose.Schema = new Schema({
     }
 });
 
-export default mongoose.model<Role>('Role', UserSchema);
+export default mongoose.model<Role>('Role', RoleSchema);

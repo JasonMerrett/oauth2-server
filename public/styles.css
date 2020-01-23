@@ -1,0 +1,25 @@
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+body {
+    background-color: #181716;
+}
+
+.btn-default {
+    background-color: #136a8c;
+}
+
+.btn-default:hover {
+    background-color: #115f7e;
+}
+
+.link-default {
+    color: #136a8c;
+}
+
+.link-default:hover {
+    color: #115f7e;
+}
