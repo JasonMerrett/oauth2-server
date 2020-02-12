@@ -4,7 +4,7 @@ import User from '../user/user.interface';
 interface RefreshToken extends Document {
     _id: Schema.Types.ObjectId;
     token: string;
-    user?: User | Schema.Types.ObjectId;
+    user: User;
     clientId: string;
     scope: string[];
     expirationDate: Date;
