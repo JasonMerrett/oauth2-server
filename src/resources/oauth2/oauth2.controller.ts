@@ -135,8 +135,6 @@ class Oauth2Controller implements Controller {
                     .findOne({ code: code })
                     .populate('user');
 
-                console.log('hello1');
-
                 if (!authCode)
                     return done(new HttpException(401, 'Auth code is invalid'));
 
@@ -149,8 +147,6 @@ class Oauth2Controller implements Controller {
                     return done(
                         new HttpException(401, 'redirect URI is invalid')
                     );
-
-                console.log('hello2');
 
                 // TODO: if delete fails don't stop request but flag up in logs
                 authorisationCodeModel.deleteOne({ code: code });
@@ -167,8 +163,6 @@ class Oauth2Controller implements Controller {
                     process.env.JWT_SECRET as Secret
                 );
 
-                console.log('hello3');
-
                 const refreshTokenExpirationDate = add(Date.now(), {
                     days: 365
                 });
@@ -181,8 +175,6 @@ class Oauth2Controller implements Controller {
                     },
                     process.env.JWT_SECRET as Secret
                 );
-
-                console.log('hello4');
 
                 // Using await so we don't continue with the request if a DB request fails
                 await accessTokenModel.create({
@@ -203,7 +195,6 @@ class Oauth2Controller implements Controller {
 
                 return done(null, token, refreshToken);
             } catch (e) {
-                console.log(e);
                 return done(e);
             }
         }
@@ -334,7 +325,6 @@ class Oauth2Controller implements Controller {
 
                 return done(null, token);
             } catch (e) {
-                console.log(e);
                 return done(e);
             }
         }
