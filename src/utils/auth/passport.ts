@@ -1,10 +1,16 @@
 import passport from 'passport';
 import passportLocal from 'passport-local';
+import passportBasic from 'passport-http';
+import passportClient from 'passport-oauth2-client-password';
 import roleModel from '../../resources/user/role/role.model';
 import userModel from '../../resources/user/user.model';
 import User from '../../resources/user/user.interface';
+import clientModel from '../../resources/client/client.model';
+import HttpException from '../exceptions/HttpExceptions';
 
 const LocalStrategy = passportLocal.Strategy;
+const BasicStrategy = passportBasic.BasicStrategy;
+const ClientPasswordStrategy = passportClient.Strategy;
 
 passport.use(
     'register',
@@ -53,6 +59,38 @@ passport.use(
             }
         } catch (e) {
             return done(e.message, null);
+        }
+    })
+);
+
+passport.use(
+    new BasicStrategy(async (clientId, clientSecret, done) => {
+        try {
+            const client = await clientModel.findOne({ clientId: clientId });
+
+            if (!client)
+                return done(new HttpException(404, 'Client not found'));
+
+            if (client.isValidSecret(clientSecret)) return done(null, client);
+            else return done(new HttpException(401, 'Client not authorised'));
+        } catch (e) {
+            return done(e);
+        }
+    })
+);
+
+passport.use(
+    new ClientPasswordStrategy(async (clientId, clientSecret, done) => {
+        try {
+            const client = await clientModel.findOne({ clientId: clientId });
+
+            if (!client)
+                return done(new HttpException(404, 'Client not found'));
+
+            if (client.isValidSecret(clientSecret)) return done(null, client);
+            else return done(new HttpException(401, 'Client not authorised'));
+        } catch (e) {
+            return done(e);
         }
     })
 );

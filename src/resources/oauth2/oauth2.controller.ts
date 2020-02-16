@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, response } from 'express';
 import oauth from 'oauth2orize';
 import passport from 'passport';
 import login from 'connect-ensure-login';
@@ -14,6 +14,7 @@ import authorisationCodeModel from '../authorisationCode/authorisationCode.model
 import accessTokenModel from '../accessToken/accessToken.model';
 import refreshTokenModel from '../refreshToken/refreshToken.model';
 import HttpException from '../../utils/exceptions/HttpExceptions';
+import Client from '../client/client.interface';
 
 class Oauth2 implements Controller {
     public path = '/oauth';
@@ -21,13 +22,47 @@ class Oauth2 implements Controller {
     private server = oauth.createServer();
 
     constructor() {
-        // add grant types to server
+        // Add grant types to server
         this.server.grant(this.grantAuthCode);
         this.server.grant(this.grantImplicitAuth);
         this.server.exchange(this.exchangeAuthCode);
         this.server.exchange(this.exchangeUsernameAndPassword);
         this.server.exchange(this.exchangeRefreshToken);
-        // initialise routes
+
+        // Add serialize and deserialize functions
+        this.server.serializeClient((client: Client, done) => {
+            return done(null, client.id);
+        });
+
+        this.server.deserializeClient(async (clientId, done) => {
+            try {
+                const client = await clientModel.findById(clientId);
+
+                if (!client)
+                    return done(new HttpException(401, 'Client not found'));
+
+                return done(null, client);
+            } catch (e) {
+                return done(e);
+            }
+        });
+
+        // Initialise routes
+        this.router.post(
+            `${this.path}/authorise`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (this.authorisation as unknown) as express.RequestHandler<any>
+        );
+        this.router.post(
+            `${this.path}/authorise/decision`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (this.decision as unknown) as express.RequestHandler<any>
+        );
+        this.router.post(
+            `${this.path}/authorise/token`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (this.token as unknown) as express.RequestHandler<any>
+        );
     }
 
     /**
@@ -289,6 +324,68 @@ class Oauth2 implements Controller {
             }
         }
     );
+
+    /**
+     * User authorisation middleware
+     */
+    private authorisation = [
+        login.ensureLoggedIn('/auth/login'),
+        this.server.authorization(
+            async (clientId, redirectUri, done) => {
+                try {
+                    const client = await clientModel.findOne({
+                        clientId: clientId
+                    });
+
+                    if (!client)
+                        return done(new HttpException(401, 'Invalid Client'));
+
+                    if (client.redirectURI !== redirectUri)
+                        return done(
+                            new HttpException(403, 'Unauthorized Client')
+                        );
+
+                    return done(null, client, redirectUri);
+                } catch (e) {
+                    return done(e);
+                }
+            },
+            (client, user, scope, type, areq, done) => {
+                // auto approve if client is trusted
+                if (client.trusted) return done(null, true, '', '');
+
+                // otherwise ask the user
+                return done(null, false, '', '');
+            }
+        ),
+        (req: Request, res: Response): void => {
+            // TODO: Pass through scopes so user can see what client will be able to access
+            return res.render('dialog', {
+                transactionId: req.oauth2.transactionID,
+                user: req.user,
+                client: req.oauth2.client
+            });
+        }
+    ];
+
+    /**
+     * User decision middleware
+     */
+    private decision = [
+        login.ensureLoggedIn('/auth/login'),
+        this.server.decision()
+    ];
+
+    /**
+     * Token middleware
+     */
+    private token = [
+        passport.authenticate(['basic', 'oauth2-client-password'], {
+            session: false
+        }),
+        this.server.token(),
+        this.server.errorHandler()
+    ];
 }
 
 export default Oauth2;
