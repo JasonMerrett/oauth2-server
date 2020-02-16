@@ -149,7 +149,7 @@ class Oauth2Controller implements Controller {
                     );
 
                 // TODO: if delete fails don't stop request but flag up in logs
-                authorisationCodeModel.deleteOne({ code: code });
+                authorisationCodeModel.deleteOne({ code: code }).exec();
 
                 // Everything validated return tokens
                 const tokenExpirationDate = add(Date.now(), { days: 1 });
