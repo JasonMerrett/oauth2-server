@@ -1,4 +1,4 @@
-import express, { Request, Response, response } from 'express';
+import express, { Request, Response } from 'express';
 import oauth from 'oauth2orize';
 import passport from 'passport';
 import login from 'connect-ensure-login';
