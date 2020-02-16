@@ -65,21 +65,15 @@ passport.use(
 
 passport.use(
     new BasicStrategy(async (clientId, clientSecret, done) => {
-        console.log('test1');
         try {
             const client = await clientModel.findOne({ clientId: clientId });
-            console.log('test2');
 
             if (!client)
                 return done(new HttpException(404, 'Client not found'));
 
-            console.log('test3');
-
             if (client.isValidSecret(clientSecret)) {
-                console.log('test4');
                 return done(null, client);
             } else {
-                console.log('test5');
                 return done(new HttpException(401, 'Client not authorised'));
             }
         } catch (e) {
@@ -91,7 +85,6 @@ passport.use(
 
 passport.use(
     new ClientPasswordStrategy(async (clientId, clientSecret, done) => {
-        console.log('test2');
         try {
             const client = await clientModel.findOne({ clientId: clientId });
 
