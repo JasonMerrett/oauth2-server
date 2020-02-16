@@ -6,7 +6,7 @@ import uuidV4 from 'uuid/v4';
 import jwt, { Secret } from 'jsonwebtoken';
 import short from 'short-uuid';
 import Controller from '../../utils/interfaces/controller.interface';
-import date from 'date-fns';
+import { add, format } from 'date-fns';
 
 import userModel from '../user/user.model';
 import clientModel from '../client/client.model';
@@ -16,7 +16,7 @@ import refreshTokenModel from '../refreshToken/refreshToken.model';
 import HttpException from '../../utils/exceptions/HttpExceptions';
 import Client from '../client/client.interface';
 
-class Oauth2 implements Controller {
+class Oauth2Controller implements Controller {
     public path = '/oauth';
     public router = express.Router();
     private server = oauth.createServer();
@@ -48,18 +48,18 @@ class Oauth2 implements Controller {
         });
 
         // Initialise routes
-        this.router.post(
-            `${this.path}/authorise`,
+        this.router.get(
+            `${this.path}/authorize`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this.authorisation as unknown) as express.RequestHandler<any>
         );
         this.router.post(
-            `${this.path}/authorise/decision`,
+            `${this.path}/authorize/decision`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this.decision as unknown) as express.RequestHandler<any>
         );
         this.router.post(
-            `${this.path}/authorise/token`,
+            `${this.path}/token`,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this.token as unknown) as express.RequestHandler<any>
         );
@@ -99,14 +99,13 @@ class Oauth2 implements Controller {
             if (client instanceof Array) {
                 client = client[0];
             }
-
-            const expirationDate = date.add(Date.now(), { days: 1 });
+            const expirationDate = add(Date.now(), { days: 1 });
             const tokenID = uuidV4();
             const token = jwt.sign(
                 {
                     jti: tokenID,
-                    user: { _id: user.id, scope: client.scope },
-                    exp: expirationDate
+                    user: { id: user.id, scope: client.scope },
+                    exp: Number(format(expirationDate, 't'))
                 },
                 process.env.JWT_SECRET as Secret
             );
@@ -114,7 +113,7 @@ class Oauth2 implements Controller {
             try {
                 await accessTokenModel.create({
                     token: tokenID,
-                    userId: user.id,
+                    user: user.id,
                     clientId: client.clientId,
                     expirationDate: expirationDate
                 });
@@ -136,46 +135,59 @@ class Oauth2 implements Controller {
                     .findOne({ code: code })
                     .populate('user');
 
-                if (!authCode) return done(new Error('Auth code is invalid'));
+                console.log('hello1');
+
+                if (!authCode)
+                    return done(new HttpException(401, 'Auth code is invalid'));
 
                 if (client.clientId !== authCode.clientId)
-                    return done(new Error('Client does not match'));
+                    return done(
+                        new HttpException(401, 'Client does not match')
+                    );
 
                 if (redirectUri !== authCode.redirectURI)
-                    return done(new Error('redirect URI is invalid'));
+                    return done(
+                        new HttpException(401, 'redirect URI is invalid')
+                    );
+
+                console.log('hello2');
 
                 // TODO: if delete fails don't stop request but flag up in logs
                 authorisationCodeModel.deleteOne({ code: code });
 
                 // Everything validated return tokens
-                const tokenExpirationDate = date.add(Date.now(), { days: 1 });
+                const tokenExpirationDate = add(Date.now(), { days: 1 });
                 const tokenID = uuidV4();
                 const token = jwt.sign(
                     {
                         jti: tokenID,
-                        user: { _id: authCode.user.id, scope: client.scope },
-                        exp: tokenExpirationDate
+                        user: { id: authCode.user.id, scope: client.scope },
+                        exp: Number(format(tokenExpirationDate, 't'))
                     },
                     process.env.JWT_SECRET as Secret
                 );
 
-                const refreshTokenExpirationDate = date.add(Date.now(), {
+                console.log('hello3');
+
+                const refreshTokenExpirationDate = add(Date.now(), {
                     days: 365
                 });
                 const refreshTokenID = uuidV4();
                 const refreshToken = jwt.sign(
                     {
                         jti: refreshTokenID,
-                        user: { _id: authCode.user.id, scope: client.scope },
-                        exp: refreshTokenExpirationDate
+                        user: { id: authCode.user.id, scope: client.scope },
+                        exp: Number(format(refreshTokenExpirationDate, 't'))
                     },
                     process.env.JWT_SECRET as Secret
                 );
 
+                console.log('hello4');
+
                 // Using await so we don't continue with the request if a DB request fails
                 await accessTokenModel.create({
                     token: tokenID,
-                    userId: authCode.user.id,
+                    user: authCode.user.id,
                     clientId: client.clientId,
                     scope: client.scope,
                     expirationDate: tokenExpirationDate
@@ -183,7 +195,7 @@ class Oauth2 implements Controller {
 
                 await refreshTokenModel.create({
                     token: refreshTokenID,
-                    userId: authCode.user.id,
+                    user: authCode.user.id,
                     clientId: client.clientId,
                     scope: client.scope,
                     expirationDate: refreshTokenExpirationDate
@@ -191,6 +203,7 @@ class Oauth2 implements Controller {
 
                 return done(null, token, refreshToken);
             } catch (e) {
+                console.log(e);
                 return done(e);
             }
         }
@@ -216,26 +229,26 @@ class Oauth2 implements Controller {
                         new HttpException(401, 'Incorrect username or password')
                     );
 
-                const tokenExpirationDate = date.add(Date.now(), { days: 1 });
+                const tokenExpirationDate = add(Date.now(), { days: 1 });
                 const tokenID = uuidV4();
                 const token = jwt.sign(
                     {
                         jti: tokenID,
-                        user: { _id: user.id, scope: scope },
-                        exp: tokenExpirationDate
+                        user: { id: user.id, scope: scope },
+                        exp: Number(format(tokenExpirationDate, 't'))
                     },
                     process.env.JWT_SECRET as Secret
                 );
 
-                const refreshTokenExpirationDate = date.add(Date.now(), {
+                const refreshTokenExpirationDate = add(Date.now(), {
                     days: 365
                 });
                 const refreshTokenID = uuidV4();
                 const refreshToken = jwt.sign(
                     {
                         jti: refreshTokenID,
-                        user: { _id: user.id, scope: scope },
-                        exp: refreshTokenExpirationDate
+                        user: { id: user.id, scope: scope },
+                        exp: Number(format(refreshTokenExpirationDate, 't'))
                     },
                     process.env.JWT_SECRET as Secret
                 );
@@ -243,7 +256,7 @@ class Oauth2 implements Controller {
                 // Using await so we don't continue with the request if a DB request fails
                 await accessTokenModel.create({
                     token: tokenID,
-                    userId: user.id,
+                    user: user.id,
                     clientId: client.clientId,
                     scope: scope,
                     expirationDate: tokenExpirationDate
@@ -251,7 +264,7 @@ class Oauth2 implements Controller {
 
                 await refreshTokenModel.create({
                     token: refreshTokenID,
-                    userId: user.id,
+                    user: user.id,
                     clientId: client.clientId,
                     scope: scope,
                     expirationDate: refreshTokenExpirationDate
@@ -281,7 +294,8 @@ class Oauth2 implements Controller {
                     .findOne({
                         token: refreshTokenDecoded.jti
                     })
-                    .populate('user');
+                    .populate('user')
+                    .exec();
 
                 if (!fetchedRefreshToken)
                     return done(
@@ -296,23 +310,23 @@ class Oauth2 implements Controller {
                         )
                     );
 
-                const tokenExpirationDate = date.add(Date.now(), { days: 1 });
+                const tokenExpirationDate = add(Date.now(), { days: 1 });
                 const tokenID = uuidV4();
                 const token = jwt.sign(
                     {
                         jti: tokenID,
                         user: {
-                            _id: fetchedRefreshToken.user.id,
+                            id: fetchedRefreshToken.user.id,
                             scope: scope
                         },
-                        exp: tokenExpirationDate
+                        exp: Number(format(tokenExpirationDate, 't'))
                     },
                     process.env.JWT_SECRET as Secret
                 );
 
                 await accessTokenModel.create({
                     token: tokenID,
-                    userId: fetchedRefreshToken.user.id,
+                    user: fetchedRefreshToken.user.id,
                     clientId: client.clientId,
                     scope: scope,
                     expirationDate: tokenExpirationDate
@@ -320,6 +334,7 @@ class Oauth2 implements Controller {
 
                 return done(null, token);
             } catch (e) {
+                console.log(e);
                 return done(e);
             }
         }
@@ -388,4 +403,4 @@ class Oauth2 implements Controller {
     ];
 }
 
-export default Oauth2;
+export default Oauth2Controller;

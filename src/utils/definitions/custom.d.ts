@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import User from '../../resources/user/user.interface';
+import defaultUser from '../../resources/user/user.interface';
 import Client from '../../resources/client/client.interface';
 
 declare global {
@@ -11,5 +11,7 @@ declare global {
                 client: Client;
             };
         }
+        // eslint-disable-next-line @typescript-eslint/no-empty-interface
+        export interface User extends defaultUser {}
     }
 }
